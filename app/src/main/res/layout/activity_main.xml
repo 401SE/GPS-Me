@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <EditText
+        android:id="@+id/smsPhone_EditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="phone"/>
+
+    <EditText
+        android:id="@+id/smsMessage_EditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10" />
+
+
+    <Button
+        android:id="@+id/GPS_Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="GPS" />
+
+    <Button
+        android:id="@+id/send_Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="onSend"
+        android:text="Send" />
+
+
+    <Button
+        android:id="@+id/connect_Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Socket" />
+
+    <Button
+        android:id="@+id/status_Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Status" />
+
+    <Button
+        android:id="@+id/garage_Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Garage" />
+
+    <TextView
+        android:id="@+id/messageLog_TextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textLongMessage|textMultiLine"
+        android:scrollbars="vertical" />
+
+</LinearLayout>
