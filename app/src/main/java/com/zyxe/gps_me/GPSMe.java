@@ -10,6 +10,8 @@
 //      See String gpsMe for an example.
 //      C:\z\github\Android\GPSMe
 
+
+
 package com.zyxe.gps_me;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -44,9 +46,11 @@ import java.net.Socket;
  *
  *      VIP mode: Instance 1
  *           Pre-conditions:
- *               Start a socket connection to Raspberry Pi on site ( < 20 meters).
- *               Leave premises of a distance greater than 20 meters.
- *               Sensor state = Garage door is open.
+ *              Android Cell phone with WiFi disabled.
+ *                   WiFi may disconnect before VIP command to close garage door.
+ *              Start a socket connection to Raspberry Pi on site ( < 30 meters).
+ *              Leave premises of a distance greater than 30 meters.
+ *              Sensor state = Garage door is open.
  *
  *           Input:
  *               Nothing
@@ -74,6 +78,8 @@ public class GPSMe extends AppCompatActivity
     public double longitude;
     public double speed_mps;
     public double speed_mph;
+    public double speed_mph_max = 0;
+    public double distance_max = 0;
 
     public EditText smsPhone_EditText;
     public EditText smsMessage_EditText;
@@ -97,6 +103,17 @@ public class GPSMe extends AppCompatActivity
     String gpsMe = "";              //  Set gpsMe to "";
                                     //  otherwise,
                                     //  passing in Thread → error.
+
+
+//    double lat_A = 37.81580846;         //  PC Room
+//    double lon_A = -121.90025908;       //  PC Room
+    double lat_A = 37.815767;         //  Garage
+    double lon_A = -121.900619;       //  Garage
+    int homeRoam = 40;                  //  PC Room is 40.
+    double gps_Starting_Calibration_Distance;
+    double distanceTo;
+    int pollInterval = 500;            // ms
+
 // 24
 
     /**
@@ -113,8 +130,6 @@ public class GPSMe extends AppCompatActivity
         smsMessage_EditText = findViewById(R.id.smsMessage_EditText);
         GPS_Button = findViewById(R.id.GPS_Button);
         send_Button = findViewById(R.id.send_Button);
-
-        //  New IOT - Garage Door
         connect_Button = findViewById(R.id.connect_Button);
         status_Button = findViewById(R.id.status_Button);
 
@@ -174,8 +189,10 @@ public class GPSMe extends AppCompatActivity
 
             @Override
             public void onClick(View v) {
+                double d = checkDistanceTo();
+                String s = String.format( "OnSite: %b, MaxDistance: %f, Distance: %f, MaxSpeed: %f \n", VIP_OnSite, distance_max, distanceTo, speed_mph_max );
+                messageLog_TextView.setText( s );
                 getGPS();
-                //checkDistanceTo();
             }
         });
 
@@ -183,28 +200,36 @@ public class GPSMe extends AppCompatActivity
 
         // 39
         //      New     IOT
-
         connect_Button.setOnClickListener(new View.OnClickListener()
         {
             @Override
             public void onClick(View v)
             {
-                if (connect_Button.getText().equals("Connect")) {
+                VIP_OnSite = false;
+                if (connect_Button.getText().equals("Connect"))
+                {
                     //messageLog_TextView.setText("");
                     //SERVER_IP = etIP.getText().toString().trim();
                     //                    //SERVER_PORT = Integer.parseInt(etPort.getText().toString().trim());
 //                    SERVER_IP = "10.0.0.227";
 //                    SERVER_PORT = 7000;
-
-                    SERVER_IP = "10.0.0.124";
+                    speed_mph_max   = 0;
+                    distance_max    = 0;
+                    messageLog_TextView.setText("");
+                    //SERVER_IP = "10.0.0.124";
+                    SERVER_IP = "73.223.16.32";
                     SERVER_PORT = 8070;
+                    gps_Starting_Calibration_Distance = checkDistanceTo();
 
-                    if (checkDistanceTo() < 20 )
+                    if (gps_Starting_Calibration_Distance < homeRoam )
                     {
                         VIP_OnSite = true;
-                        Toast.makeText(getApplicationContext(), "Welcome VIP !", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getApplicationContext(), "Welcome VIP !\nHome Roam\n" + gps_Starting_Calibration_Distance, Toast.LENGTH_LONG).show();
                     }
-
+                    else
+                    {
+                        Toast.makeText(getApplicationContext(), "Remote VIP\n" + gps_Starting_Calibration_Distance, Toast.LENGTH_LONG).show();
+                    }
                     connect_Button.setText("Disconnect");
                     loop = true;
                     Thread1 = new Thread(new Thread1());
@@ -220,7 +245,8 @@ public class GPSMe extends AppCompatActivity
 
         status_Button.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
+            public void onClick(View v)
+            {
                 new Thread(new Thread3("Status")).start();
             }
         });
@@ -288,16 +314,6 @@ public class GPSMe extends AppCompatActivity
 
                 Location locationA = new Location("");
                 Location locationB = new Location("");
-                //  37.6562863,-122.0547037
-//            double lat_A = 37.6562863;
-//            double lon_A = -122.0547037;
-
-                //      Family Room
-//            double lat_A = 37.81580066;
-//            double lon_A = -121.90002732;
-
-                double lat_A = 37.81580846;
-                double lon_A = -121.90025908;
 
                 locationA.setLatitude(lat_A);
                 locationA.setLongitude(lon_A);
@@ -307,6 +323,10 @@ public class GPSMe extends AppCompatActivity
                 speed_mps = l.getSpeed();
                 speed_mph = speed_mps * 2.2369362920544;
 
+                if ( speed_mph > speed_mph_max)
+                    speed_mph_max = speed_mph;
+
+
 //                String s = String.format("%s %f\n%s %f\n%s %f\n%s %f\n", "Latitude: ", latitude,
 //                        "Longitude", longitude, "Speed mps: ", speed_mps, "Speed mph: ", speed_mph );
 //                messageLog_TextView.append( s );
@@ -314,13 +334,21 @@ public class GPSMe extends AppCompatActivity
                 locationB.setLatitude(latitude);
                 locationB.setLongitude(longitude);
 
-                distance[0] = locationA.distanceTo(locationB);
+                //distance[0] = locationA.distanceTo(locationB);
+                distanceTo = locationA.distanceTo(locationB);
 
-                gpsMe = String.format("%s: %f,  %s: %f", "Feet: ", distance[0] * 3.28084, "Meters: ", distance[0]);
+
+                if ( distanceTo > distance_max )
+                    distance_max = distanceTo;
+
+
+                //gpsMe = String.format("%s: %f,  %s: %f", "Feet: ", distance[0] * 3.28084, "Meters: ", distance[0]);
+                gpsMe = String.format("%s: %f,  %s: %f", "Feet: ", distanceTo * 3.28084, "Speed: ",speed_mph );
             }
         });
 
-        return distance[0];
+        //return distance[0];
+        return distanceTo;
     }
 
 // 96
@@ -440,18 +468,31 @@ public class GPSMe extends AppCompatActivity
                 //      Continue to loop to monitor & check distance
                 do {
 
-                    if ( VIP_OnSite && checkDistanceTo() > 20)
+                    double calibrate = checkDistanceTo() - gps_Starting_Calibration_Distance;
+                    String s = String.format( "%s %b, %s,  %s %f", "OnSite: ", VIP_OnSite, gpsMe, "Calibrate: ", calibrate);
+                    Log.i(TAG, s);
+
+                    if ( VIP_OnSite && speed_mph > 5)
                         {
                             VIP_OnSite = false;
-                            new Thread(new Thread3( "Garage" )).start();
+                            distance_max    = 0;
+                            speed_mph_max   = 0;
+                            new Thread(new Thread3( "Garage_Close" )).start();
                         }
                     else
-                        new Thread(new Thread3( gpsMe )).start();
-
-
+                    if ( !VIP_OnSite && checkDistanceTo() < homeRoam && distance_max > 40 && speed_mph_max > 1)
+                    {
+                        VIP_OnSite = true;
+                        distance_max    = 0;
+                        speed_mph_max   = 0;
+                        new Thread(new Thread3( "Garage_Open" )).start();
+                    }
+                        //new Thread(new Thread3( gpsMe )).start();
+                        //new Thread(new Thread3( s )).start();
+//                        new Thread(new Thread3( Double.toString( calibrate ) )).start();
 
                     try {
-                        Thread.sleep(60000);
+                        Thread.sleep( pollInterval );
                     } catch (Exception e) {
                         //
                     }
@@ -515,13 +556,13 @@ public class GPSMe extends AppCompatActivity
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    messageLog_TextView.append("client: " + message + "\n");
+                    messageLog_TextView.append("> " + message + "\n");
                     if (message.equals("exit")) {
                         messageLog_TextView.append("Socket Connection Closed: " + socket + "\n");
                         connect_Button.setText("Connect");
                     }
                     //  ****************    etMessage.setText("");
-                    Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                //                    Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
                 }
             });
 
