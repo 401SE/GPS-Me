@@ -485,6 +485,7 @@ public class GPSMe extends AppCompatActivity
                         VIP_OnSite = true;
                         distance_max    = 0;
                         speed_mph_max   = 0;
+                        pollInterval = 30000;           // 30 seconds       Otherwise, Garage_Open, wait 500 ms, Garage_Close
                         new Thread(new Thread3( "Garage_Open" )).start();
                     }
                         //new Thread(new Thread3( gpsMe )).start();
@@ -493,6 +494,7 @@ public class GPSMe extends AppCompatActivity
 
                     try {
                         Thread.sleep( pollInterval );
+                        pollInterval = 1000;
                     } catch (Exception e) {
                         //
                     }
