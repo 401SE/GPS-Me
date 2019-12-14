@@ -145,7 +145,7 @@ public class GPSMe extends AppCompatActivity
             smsPhone_EditText.setText(phone_string);
             smsMessage_EditText.setText(message_string);
 
-            if (smsMessage_EditText.getText().toString().toLowerCase().equals("GPS_Button")) {
+            if (smsMessage_EditText.getText().toString().toLowerCase().equals("gps")) {
                 getGPS();
                 sendGPS();
             }
@@ -485,7 +485,7 @@ public class GPSMe extends AppCompatActivity
                         VIP_OnSite = true;
                         distance_max    = 0;
                         speed_mph_max   = 0;
-                        pollInterval = 30000;           // 30 seconds       Otherwise, Garage_Open, wait 500 ms, Garage_Close
+                        pollInterval = 60000;           // 1 minute       Otherwise, Garage_Open, wait 500 ms, Garage_Close
                         new Thread(new Thread3( "Garage_Open" )).start();
                     }
                         //new Thread(new Thread3( gpsMe )).start();
