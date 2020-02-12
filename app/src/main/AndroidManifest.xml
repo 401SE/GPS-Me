@@ -3,9 +3,14 @@
     package="com.zyxe.gps_me">
 
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
+
+    <!--uses-permission android:name="android.permission.READ_SMS"/-->
     <uses-permission android:name="android.permission.READ_SMS"/>
     <uses-permission android:name="android.permission.SEND_SMS"/>
+
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <!--uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/-->
 
     <uses-permission android:name = "android.permission.INTERNET" />
     <uses-permission android:name = "android.permission.ACCESS_NETWORK_STATE" />
@@ -19,7 +24,8 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity   android:name=".GPSMe"
-                    android:windowSoftInputMode="stateAlwaysHidden" >
+                    android:windowSoftInputMode="stateAlwaysHidden"
+                    android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
