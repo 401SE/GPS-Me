@@ -29,6 +29,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -37,6 +38,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+
+
+// Check Line 256 for unused variable d
+
 
 
 /**
@@ -116,6 +121,9 @@ public class GPSMe extends AppCompatActivity {
     double distanceTo;
     int pollInterval = 500;            // ms
 
+    ImageView heartbeat;
+    boolean heartbeat_status = false;
+
 // 24
 
     /**
@@ -153,7 +161,8 @@ public class GPSMe extends AppCompatActivity {
         garage_Button = findViewById(R.id.garage_Button);
         connect_Button.setText("Connect");
         messageLog_TextView.setMovementMethod(new ScrollingMovementMethod());
-
+        heartbeat = (ImageView)findViewById(R.id.heartbeat_image);
+        heartbeat.setVisibility(View.INVISIBLE);
 
 
         if (savedInstanceState != null)
@@ -187,6 +196,15 @@ public class GPSMe extends AppCompatActivity {
                     //   System.exit(0);       // Repeats
                     finish();       //  Optional
                 }
+                if (smsMessage_EditText.getText().toString().toLowerCase().equals("speed"))
+                {
+                    getGPS();
+                    sendGPS();
+                    //   System.exit(0);       // Repeats
+                    finish();       //  Optional
+                }
+
+
 
             }
 
@@ -244,7 +262,7 @@ public class GPSMe extends AppCompatActivity {
 
             @Override
             public void onClick(View v) {
-                double d = checkDistanceTo();
+                checkDistanceTo();
                 String s = String.format("OnSite: %b, MaxDistance: %f, Distance: %f, MaxSpeed: %f \n", VIP_OnSite, distance_max, distanceTo, speed_mph_max);
                 messageLog_TextView.setText(s);
                 getGPS();
@@ -272,13 +290,15 @@ public class GPSMe extends AppCompatActivity {
                     //SERVER_IP = "10.0.0.124";
                     SERVER_IP = "73.223.16.32";
                     SERVER_PORT = 8070;
-                    gps_Starting_Calibration_Distance = checkDistanceTo();
+                     //gps_Starting_Calibration_Distance = checkDistanceTo();
+                    double d = checkDistanceTo();
 
-                    if (gps_Starting_Calibration_Distance < homeRoam) {
+                    //  if (gps_Starting_Calibration_Distance < homeRoam) {
+                    if (  d < homeRoam) {
                         VIP_OnSite = true;
-                        Toast.makeText(getApplicationContext(), "Welcome VIP !\nHome Roam\n" + gps_Starting_Calibration_Distance, Toast.LENGTH_LONG).show();
+                        Toast.makeText(getApplicationContext(), "Welcome VIP !\nHome Roam\n" + d, Toast.LENGTH_LONG).show();
                     } else {
-                        Toast.makeText(getApplicationContext(), "Remote VIP\n" + gps_Starting_Calibration_Distance, Toast.LENGTH_LONG).show();
+                        Toast.makeText(getApplicationContext(), "Remote VIP\n" + d, Toast.LENGTH_LONG).show();
                     }
                     connect_Button.setText("Disconnect");
                     loop = true;
@@ -311,7 +331,8 @@ public class GPSMe extends AppCompatActivity {
         });
 
 
-
+        if ( pollInterval == 1000 )
+            Toast.makeText( this, "Poll Interval = " + pollInterval, Toast.LENGTH_LONG).show();
 
 
 
@@ -479,8 +500,12 @@ public class GPSMe extends AppCompatActivity {
             return;
         }
 
-        if (checkPermission(Manifest.permission.SEND_SMS)) {
+
+
+        if (checkPermission(Manifest.permission.SEND_SMS))
+        {
             SmsManager smsManager = SmsManager.getDefault();
+            smsManager.sendTextMessage(phoneNumber, null, "mph: " + Double.toString( speed_mph ), null, null);
             smsManager.sendTextMessage(phoneNumber, null, smsMessage, null, null);
             Toast.makeText(this, "Message Sent !", Toast.LENGTH_LONG).show();
         } else {
@@ -518,8 +543,10 @@ public class GPSMe extends AppCompatActivity {
      */
     class Thread1 implements Runnable
     {
-        public void run() {
-            try {
+        public void run()
+        {
+            try
+            {
                 socket = new Socket(SERVER_IP, SERVER_PORT);
                 output = new PrintWriter(socket.getOutputStream());
                 in = new InputStreamReader(socket.getInputStream());
@@ -534,32 +561,138 @@ public class GPSMe extends AppCompatActivity {
                 new Thread(new Thread2()).start();
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 //      Continue to loop to monitor & check distance
-                do {
+                do
+                    {
+                        checkDistanceTo();   // Updates global variable distanceTo
 
-                    double calibrate = checkDistanceTo() - gps_Starting_Calibration_Distance;
-                    String s = String.format("%s %b, %s,  %s %f", "OnSite: ", VIP_OnSite, gpsMe, "Calibrate: ", calibrate);
-                    Log.i(TAG, s);
+                        String s = String.format("%s %b, %s,  %s %f", "OnSite: ", VIP_OnSite, gpsMe, "Distance: ", distanceTo );
+                        Log.i(TAG, s);
 
-                    if (VIP_OnSite && speed_mph > 5) {
-                        VIP_OnSite = false;
-                        distance_max = 0;
-                        speed_mph_max = 0;
-                        new Thread(new Thread3("Garage_Close")).start();
-                    } else if (!VIP_OnSite && checkDistanceTo() < homeRoam && distance_max > 40 && speed_mph_max > 1) {
-                        VIP_OnSite = true;
-                        distance_max = 0;
-                        speed_mph_max = 0;
-                        pollInterval = 60000;           // 1 minute       Otherwise, Garage_Open, wait 500 ms, Garage_Close
-                        new Thread(new Thread3("Garage_Open")).start();
-                    }
-                    //new Thread(new Thread3( gpsMe )).start();
-                    //new Thread(new Thread3( s )).start();
-//                        new Thread(new Thread3( Double.toString( calibrate ) )).start();
+                        if (VIP_OnSite && distanceTo > 10 && speed_mph > 5 && pollInterval < 30000 )
+                        {
+                            pollInterval = 10000;
+                            VIP_OnSite = false;
+                            distance_max = 0;
+                            speed_mph_max = 0;
+                            new Thread(new Thread3("Garage_Close")).start();
+                        }
 
-                    try {
+
+                        if (VIP_OnSite == false )
+                        {
+                            if ( pollInterval <= 1000 && distanceTo > 1000 )
+                                pollInterval = 30000;
+
+
+
+
+                            if (!VIP_OnSite && distanceTo < 600 && distance_max > 600 && pollInterval > 1000 )
+                            {
+                                pollInterval = 1000;
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run()
+                                    {
+                                        String s = String.format("%s %f\n", "VIP is coming home.: ", distanceTo );
+                                        messageLog_TextView.append(s);
+                                        Toast.makeText(GPSMe.this, s, Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
+
+
+
+                            if (!VIP_OnSite && distanceTo < 300 && distance_max > 300 && speed_mph_max > 5 && pollInterval > 500 )
+                            {
+                                pollInterval = 500;
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run()
+                                    {
+                                        String s = String.format("%s %f\n", "Welcome home. ", distanceTo );
+                                        messageLog_TextView.append(s);
+                                        Toast.makeText(GPSMe.this, s, Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
+
+
+                            if (!VIP_OnSite && distanceTo < 100 && distance_max > 200 && speed_mph_max > 5) {
+                                VIP_OnSite = true;
+                                distance_max = 0;
+                                speed_mph_max = 0;
+                                pollInterval = 30000;           // 1 minute       Otherwise, Garage_Open, wait 500 ms, Garage_Close
+                                new Thread(new Thread3("Garage_Open")).start();
+                            }
+
+
+                        }
+
+
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+
+                                String dis = Double.toString( (int) distanceTo );
+                                smsMessage_EditText.setText( dis );
+
+
+                                if ( heartbeat_status == true   )
+                                {
+                                    heartbeat_status = false;
+                                    heartbeat.setVisibility(View.INVISIBLE);
+                                }
+                                else
+                                {
+                                    heartbeat_status = true;
+                                    heartbeat.setVisibility(View.VISIBLE);
+                                }
+                            }
+                        });
+
+
+
+
+
+
+
+
+
+                        try
+                    {
                         Thread.sleep(pollInterval);
-                        pollInterval = 10000;
                     } catch (Exception e) {
                         //
                     }
